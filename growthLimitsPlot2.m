@@ -38,9 +38,50 @@ meanJN1=squeeze(mean(sum((-10*86400*365*1e-3*14*117/16)*JNall2100,3),4));
 
 y1=sind(lat);
 
-%% load SHF_QSW and HMXL, compute approx L monthly?
-%L=1-exp(-alpha.*I);
+%% dprod/dN, dprod/dI
+%d(muQL)dN=mu*meanL*k./(meanN+k)^2=
+%d(muQL)dI=mu*meanQ*alpha*(exp(-alpha*meanI))=mu*meanQ*alpha*(1-meanL)
+%for theory, assume meanQ is 0.5 
+%and assume meanL is 100m-avg of L for I=100e^-z/H
+H=-100./log(0.01);%so I=100*exp(-z/H) is 100 @surface, 1 @100m
+z=0:100; I=100*exp(-z./H); for k=1:12; meanLtheory(k)=mean(1-exp(-alpha(k).*I)); end
+dproddNtheory=mu.*meanLtheory.*(0.25./kn);
+dproddItheory=0.5*mu.*alpha.*(1-meanLtheory);
+prodtheory=mu.*meanLtheory.*0.5;
 
+%try N=sqrt(kn./mu)
+dproddNtheory2=mu.*meanLtheory.*kn./(kn+sqrt(kn./mu)).^2;
+dproddItheory2=mu.*(sqrt(kn./mu)./(kn+sqrt(kn./mu))).*alpha.*(1-meanLtheory);
+prodtheory2=mu.*meanLtheory.*(sqrt(kn./mu)./(kn+sqrt(kn./mu)));
+
+globalmeanL=squeeze(areaweightedmean(areaweightedmean(meanL02,taream,2),mean(taream,2),1));
+globalmeanQ=squeeze(areaweightedmean(areaweightedmean(meanQ02,taream,2),mean(taream,2),1));
+globalmeanN=squeeze(areaweightedmean(areaweightedmean(squeeze(nanmean(Nall2000,[3 4])),taream,2),mean(taream,2),1));
+
+globalmeanL1=squeeze(areaweightedmean(areaweightedmean(meanL12,taream,2),mean(taream,2),1));
+globalmeanQ1=squeeze(areaweightedmean(areaweightedmean(meanQ12,taream,2),mean(taream,2),1));
+globalmeanN1=squeeze(areaweightedmean(areaweightedmean(squeeze(nanmean(Nall2100,[3 4])),taream,2),mean(taream,2),1));
+
+
+dproddN=mu(:).*globalmeanL.*kn(:)./((globalmeanN+kn(:)).^2);
+dproddI=mu(:).*globalmeanQ.*alpha(:).*(1-globalmeanL);
+%% plot
+figure; subplot(2,2,1); semilogx(dproddNtheory,1:12,'o'); hold on; semilogx(dproddItheory,1:12,'o')
+ylabel('case'); legend('dR/dN Q=0.5','dR/dI N=k')
+subplot(2,2,2); semilogx(dproddNtheory2,1:12,'o'); hold on; semilogx(dproddItheory2,1:12,'o')
+legend('dR/dN N=(k/mu)^{0.5}','dR/dI')
+subplot(2,2,3); semilogx(dproddNtheory,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddItheory,100*(prod1-prod)./prod,'o');
+ylabel('% change global R')
+subplot(2,2,4); semilogx(dproddNtheory2,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddItheory2,100*(prod1-prod)./prod,'o');
+
+figure; subplot(2,2,1); semilogx(dproddN,1:12,'o'); hold on; semilogx(dproddI,1:12,'o')
+subplot(2,2,2); loglog(dproddN,dproddNtheory,'o'); hold on; loglog(dproddI,dproddItheory,'o')
+loglog([3e-4 1],[3e-4 1],'k')
+subplot(2,2,4)
+loglog(dproddN,dproddNtheory2,'o'); hold on; loglog(dproddI,dproddItheory2,'o')
+loglog([3e-4 1],[3e-4 1],'k')
+subplot(2,2,3)
+semilogx(dproddN,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddI,100*(prod1-prod)./prod,'o');
 %% compute I from L?
 L02=L0; L02(L02>1)=1; L02(L02<0)=0;
 alpha5(1,1,1,1,1:12)=alpha;
@@ -194,6 +235,58 @@ for k=1:12
    cordQL(3,k)=hold1(2);
 end
 
+%% correlations of components across parameter space
+for k=1:12
+    corAll(k,k,1:4)=1;
+    for i=k+1:12
+    x=dQL(:,:,k); x=x(~isnan(x));
+    y=dQL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,1)=hold1(2); %1 is dQL 2 is LdQ, 3 is QdL, 4 is dQdL
+   corAll(i,k,1)=hold1(2);
+    x=LdQ(:,:,k); x=x(~isnan(x));
+    y=LdQ(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,2)=hold1(2);
+   corAll(i,k,2)=hold1(2);
+   x=QdL(:,:,k); x=x(~isnan(x));
+    y=QdL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,3)=hold1(2);
+   corAll(i,k,3)=hold1(2);
+    x=dQdL(:,:,k); x=x(~isnan(x));
+    y=dQdL(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corAll(k,i,4)=hold1(2);
+   corAll(i,k,4)=hold1(2);
+    end
+end
+%
+for k=1:12
+    corQL(k,k,1:4)=1;
+    for i=k+1:12
+    x=meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,1)=hold1(2); %1 is Q, 2 is L, 3 is dQ, 4 is dL
+   corQL(i,k,1)=hold1(2);
+    x=meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,2)=hold1(2);
+   corQL(i,k,2)=hold1(2);
+   x=meanQ12(:,:,k)-meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ12(:,:,i)-meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,3)=hold1(2);
+   corQL(i,k,3)=hold1(2);
+    x=meanL12(:,:,k)-meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL12(:,:,i)-meanL02(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corQL(k,i,4)=hold1(2);
+   corQL(i,k,4)=hold1(2);
+    end
+end
 
 %% plot QL, delta(QL), deltaQ*L, deltaL*Q, deltaQ*deltaL 
 figure; subplot(3,2,1) %slow
