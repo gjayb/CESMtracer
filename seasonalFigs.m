@@ -19,7 +19,7 @@ entraina1=entrainment1(:,:,end-35:end);
 exporta1=export1(:,:,end-35:end);
 proda1=production1(:,:,end-35:end);
 
-%load XMXL %probably not using this?
+%load XMXL %just for PAP/osmosis
 XMXL=0.01*(ncread('g.e21.G.T62_g17.param2000.121.pop.h.XMXL.002101-003012.nc','XMXL',[1 1 109],[Inf Inf Inf]));%0.01 to go cm-->m
 XMXL1=0.01*(ncread('g.e21.G1850ECO.T62_g17.param2100.121.pop.h.XMXL.002101-003012.nc','XMXL',[1 1 109],[Inf Inf Inf]));
 dXMXL=XMXL1-XMXL;
@@ -31,8 +31,8 @@ z=ncread('g.e21.G.T62_g17.param2000.123.pop.h.PD.002101-003012.nc','z_t')./100;
 %strat=squeeze(PD(:,:,16,end-11:end)-PD(:,:,6,end-11:end))./100;%year 10  potential density at 155m-55m/100m
 %strat1=squeeze(PD1(:,:,16,end-11:end)-PD1(:,:,6,end-11:end))./100;
 %dstrat=strat1-strat;
-strat=squeeze(PD(:,:,16,end-11:end)-PD(:,:,1,end-11:end))./150;  %pd 155m-5m/150
-strat1=squeeze(PD1(:,:,16,end-11:end)-PD(:,:,1,end-11:end))./150; 
+strat=squeeze(PD(:,:,16,end-11:end)-PD(:,:,1,end-11:end))./-150;  %pd 155m-5m/150
+strat1=squeeze(PD1(:,:,16,end-11:end)-PD(:,:,1,end-11:end))./-150; 
 clear PD PD1
 
 %load light
@@ -63,13 +63,13 @@ meanQ0=squeeze(nanmean(Q0,3));%depth average
 meanQ1=squeeze(nanmean(Q1,3));
 meanL0=squeeze(nanmean(L0,3));
 meanL1=squeeze(nanmean(L1,3));
-clear Q0 Q1 L0 L1
-dQLs=squeeze((meanQ1.*meanL1-meanQ0.*meanL0));
-LdQs=squeeze((meanL0.*(meanQ1-meanQ0)));
-QdLs=squeeze((meanQ0.*(meanL1-meanL0)));
-dQdLs=squeeze(((meanL1-meanL0).*(meanQ1-meanQ0)));
+%clear Q0 Q1 L0 L1
+dQLs=squeeze(nanmean(Q1.*L1-Q0.*L0,3));
+LdQs=squeeze(nanmean(L0.*(Q1-Q0),3));
+QdLs=squeeze(nanmean(Q0.*(L1-L0),3));
+dQdLs=squeeze(nanmean((L1-L0).*(Q1-Q0),3));
 
-
+QL0=squeeze(nanmean(Q0.*L0,[3 4]));
 %% QL decomp regional averages
 load('climateAndRegions.mat', 'subtropSPac','osmosis','arctic')
 logN=(lat>0)&(basin~=0);%northern and southern hemisphere
@@ -77,33 +77,38 @@ logS=(lat<0)&(basin~=0);
 fracN=sum(taream(logN))./sum(taream(basin~=0));
 
 % !!need to weight by area!!
+areaSSP=sum(taream(subtropSPac));
+areaArctic=sum(taream(arctic));
+areaOs=sum(taream(osmosis));
+areaN=sum(taream(logN));
+areaS=sum(taream(logS));
 
 for monthi=1:12
     for k=1:2
     hold1=dQLs(:,:,monthi,k);
     dQLr(monthi,k,1)= nansum(hold1(subtropSPac).*taream(subtropSPac))./areaSSP;
-    dQLr(monthi,k,2)= nansum(hold1(arctic));
-    dQLr(monthi,k,3)= nansum(hold1(osmosis));
+    dQLr(monthi,k,2)= nansum(hold1(arctic).*taream(arctic))./areaArctic;
+    dQLr(monthi,k,3)= nansum(hold1(osmosis).*taream(osmosis))./areaOs;
     dQLr(monthi,k,4)= fracN*nansum(hold1(logN).*taream(logN))./areaN;
-    dQLr(monthi,k,5)= (1-fracN)*nanmean(hold1(logS))./areaS;
+    dQLr(monthi,k,5)= (1-fracN)*nansum(hold1(logS).*taream(logS))./areaS;
         hold1=LdQs(:,:,monthi,k);
-    LdQr(monthi,k,1)= nanmean(hold1(subtropSPac));
-    LdQr(monthi,k,2)= nanmean(hold1(arctic));
-    LdQr(monthi,k,3)= nanmean(hold1(osmosis));
-    LdQr(monthi,k,4)= nanmean(hold1(logN))*fracN;
-    LdQr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+    LdQr(monthi,k,1)= nansum(hold1(subtropSPac).*taream(subtropSPac))./areaSSP;
+    LdQr(monthi,k,2)= nansum(hold1(arctic).*taream(arctic))./areaArctic;
+    LdQr(monthi,k,3)= nansum(hold1(osmosis).*taream(osmosis))./areaOs;
+    LdQr(monthi,k,4)= fracN*nansum(hold1(logN).*taream(logN))./areaN;
+    LdQr(monthi,k,5)= (1-fracN)*nansum(hold1(logS).*taream(logS))./areaS;
         hold1=QdLs(:,:,monthi,k);
-    QdLr(monthi,k,1)= nanmean(hold1(subtropSPac));
-    QdLr(monthi,k,2)= nanmean(hold1(arctic));
-    QdLr(monthi,k,3)= nanmean(hold1(osmosis));
-    QdLr(monthi,k,4)= nanmean(hold1(logN))*fracN;
-    QdLr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+    QdLr(monthi,k,1)= nansum(hold1(subtropSPac).*taream(subtropSPac))./areaSSP;
+    QdLr(monthi,k,2)= nansum(hold1(arctic).*taream(arctic))./areaArctic;
+    QdLr(monthi,k,3)= nansum(hold1(osmosis).*taream(osmosis))./areaOs;
+    QdLr(monthi,k,4)= fracN*nansum(hold1(logN).*taream(logN))./areaN;
+    QdLr(monthi,k,5)= (1-fracN)*nansum(hold1(logS).*taream(logS))./areaS;
         hold1=dQdLs(:,:,monthi,k);
-    dQdLr(monthi,k,1)= nanmean(hold1(subtropSPac));
-    dQdLr(monthi,k,2)= nanmean(hold1(arctic));
-    dQdLr(monthi,k,3)= nanmean(hold1(osmosis));
-    dQdLr(monthi,k,4)= nanmean(hold1(logN))*fracN;
-    dQdLr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+    dQdLr(monthi,k,1)= nansum(hold1(subtropSPac).*taream(subtropSPac))./areaSSP;
+    dQdLr(monthi,k,2)= nansum(hold1(arctic).*taream(arctic))./areaArctic;
+    dQdLr(monthi,k,3)= nansum(hold1(osmosis).*taream(osmosis))./areaOs;
+    dQdLr(monthi,k,4)= fracN*nansum(hold1(logN).*taream(logN))./areaN;
+    dQdLr(monthi,k,5)= (1-fracN)*nansum(hold1(logS).*taream(logS))./areaS;
     end
 end
 
@@ -251,6 +256,9 @@ dqlGb=dQLr([12 1:11],2,4)+dQLr([6:12 1:5],2,5);
 qdlGb=QdLr([12 1:11],2,4)+QdLr([6:12 1:5],2,5);
 ldqGb=LdQr([12 1:11],2,4)+LdQr([6:12 1:5],2,5);
 dqdlGb=dQdLr([12 1:11],2,4)+dQdLr([6:12 1:5],2,5);
+
+globalmaxQL0=squeeze(max(max(QL0)));
+globalmeanQL0=squeeze(areaweightedmean(areaweightedmean(QL0,taream,2),mean(taream,2),1));
 %% global plot
 %entrain,prod,export; strat,mld; QL decomp; light
 
@@ -259,55 +267,62 @@ subplot(3,2,1) %entrain
 plot(1:12,entrainGa0,1:12,entrainGb0); hold all
 plot(1:12,entrainGa1,'--','Color',[0 0.45 0.74])
 plot(1:12,entrainGb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12])
+set(gca,'XTick',1:12); xlim([1 12]); ylim([0 40])
 set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(a)')
+set(gca,'fontsize',12)
+
 subplot(3,2,3) %prod
 plot(1:12,prodGa0,1:12,prodGb0); hold all
 plot(1:12,prodGa1,'--','Color',[0 0.45 0.74])
 plot(1:12,prodGb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12])
+set(gca,'XTick',1:12); xlim([1 12]); ylim([0 40])
 set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(b)')
+set(gca,'fontsize',12)
+
 subplot(3,2,5) %export
 plot(1:12,exportGa0,1:12,exportGb0); hold all
 plot(1:12,exportGa1,'--','Color',[0 0.45 0.74])
 plot(1:12,exportGb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12])
+set(gca,'XTick',1:12); xlim([1 12]); ylim([-40 0])
 set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
 ylabel('gC/m^2 y'); xlabel('(c)')
+set(gca,'fontsize',12); legend('slow 2000','fast 2000','slow 2100','fast 2100')
 
-subplot(3,2,6) %mld, strat
-yyaxis 'left'
- set(gca,'YColor','k');
+subplot(3,2,6) %mld, no strat
+%yyaxis 'left'
+% set(gca,'YColor','k');
 plot(1:12,mldG0/100,'k'); hold on; plot(1:12,mldG1/100,'k--')
 ylabel('MLD')
-yyaxis('right')
-set(gca,'YColor','r');
-plot(1:12,stratG0*150,'r'); hold on
-plot(1:12,stratG1*150,'r--')
-ylabel('\Delta \sigma_\theta')
+%yyaxis('right')
+%set(gca,'YColor','r');
+%plot(1:12,stratG0*150,'r'); hold on
+%plot(1:12,stratG1*150,'r--')
+%ylabel('\Delta \sigma_\theta')
 set(gca,'XTick',1:12); xlim([1 12])
 set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
  xlabel('(f)')
+ set(gca,'fontsize',12); legend('2000','2100')
 
 subplot(3,2,2) %QL decomp
-plot(1:12,dqlGa,'Linewidth',3); hold on
-plot(1:12,ldqGa); plot(1:12,qdlGa); plot(1:12,dqdlGa);
+plot(1:12,dqlGa/globalmaxQL0(1),'k','Linewidth',3); hold on
+plot(1:12,ldqGa/globalmaxQL0(1),'r'); plot(1:12,qdlGa/globalmaxQL0(1),'c'); plot(1:12,dqdlGa/globalmaxQL0(1),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12]);set(gca,'XTickLabels',{})
 xlabel('(d)')
+set(gca,'fontsize',12)
 
 subplot(3,2,4) %Ql decomp
-plot(1:12,dqlGb,'Linewidth',3); hold on
-plot(1:12,ldqGb); plot(1:12,qdlGb); plot(1:12,dqdlGb);
+plot(1:12,dqlGb/globalmaxQL0(2),'k','Linewidth',3); hold on
+plot(1:12,ldqGb/globalmaxQL0(2),'r'); plot(1:12,qdlGb/globalmaxQL0(2),'c'); plot(1:12,dqdlGb/globalmaxQL0(2),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12])
 set(gca,'XTickLabels',{})
-xlabel('(e)'); legend('\Delta QL','L \Delta Q','Q \Delta L','\Delta Q \Delta L')
-
+xlabel('(e)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
+set(gca,'fontsize',12)
 
 
 %% subtropical south pacific computation
-%logSSP=;
+logSSP=subtropSPac;
 areat=sum(taream(logSSP));
 
 
@@ -361,51 +376,356 @@ for i=1:36
 end
 
 entrainSSPb0=(entrainBn([36 25:35])+entrainBn([24 13:23])+entrainBn([12 1:11]))*0.365*14*117/(16*3);
+entrainSSPb1=(entrainBn1([36 25:35])+entrainBn1([24 13:23])+entrainBn1([12 1:11]))*0.365*14*117/(16*3);
+entrainSSPa0=(entrainAn([36 25:35])+entrainAn([24 13:23])+entrainAn([12 1:11]))*0.365*14*117/(16*3);
+entrainSSPa1=(entrainAn1([36 25:35])+entrainAn1([24 13:23])+entrainAn1([12 1:11]))*0.365*14*117/(16*3);
 
+exportSSPb0=(exportBn([36 25:35])+exportBn([24 13:23])+exportBn([12 1:11]))*0.365*14*117/(16*3);
+exportSSPb1=(exportBn1([36 25:35])+exportBn1([24 13:23])+exportBn1([12 1:11]))*0.365*14*117/(16*3);
+exportSSPa0=(exportAn([36 25:35])+exportAn([24 13:23])+exportAn([12 1:11]))*0.365*14*117/(16*3);
+exportSSPa1=(exportAn1([36 25:35])+exportAn1([24 13:23])+exportAn1([12 1:11]))*0.365*14*117/(16*3);
+
+prodSSPb0=(prodBn([36 25:35])+prodBn([24 13:23])+prodBn([12 1:11]))*0.365*14*117/(16*3);
+prodSSPb1=(prodBn1([36 25:35])+prodBn1([24 13:23])+prodBn1([12 1:11]))*0.365*14*117/(16*3);
+prodSSPa0=(prodAn([36 25:35])+prodAn([24 13:23])+prodAn([12 1:11]))*0.365*14*117/(16*3);
+prodSSPa1=(prodAn1([36 25:35])+prodAn1([24 13:23])+prodAn1([12 1:11]))*0.365*14*117/(16*3);
+
+dqlSSPa=dQLr([12 1:11],1,1);
+qdlSSPa=QdLr([12 1:11],1,1);
+ldqSSPa=LdQr([12 1:11],1,1);
+dqdlSSPa=dQdLr([12 1:11],1,1);
+dqlSSPb=dQLr([12 1:11],2,1);
+qdlSSPb=QdLr([12 1:11],2,1);
+ldqSSPb=LdQr([12 1:11],2,1);
+dqdlSSPb=dQdLr([12 1:11],2,1);
+
+for i=1:2
+    holdvar=QL0(:,:,i);
+    QLmaxSSP(i)=max(holdvar(logSSP));
+end
 %% SSP plot
-% Nflux, production, P flux down, growth limit changes
+% Nflux, production, P flux down, growth limit changes 
+%ADD entrain change cause??
+%switch month order to 7:12 1:6??
 figure;
-subplot(4,1,1) %entrain
-
+subplot(4,1,1) %entrain 
+plot(1:12,entrainSSPa0,1:12,entrainSSPb0); hold all
+plot(1:12,entrainSSPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,entrainSSPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(a)')
 subplot(4,1,2) %prod
-
+plot(1:12,prodSSPa0,1:12,prodSSPb0); hold all
+plot(1:12,prodSSPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,prodSSPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(b)')
 subplot(4,1,3) %export
-
-subplot(4,1,4) %Q1/Q, L1/L
-
+plot(1:12,exportSSPa0,1:12,exportSSPb0); hold all
+plot(1:12,exportSSPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,exportSSPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+ylabel('gC/m^2 y'); xlabel('(c)')
+set(gca,'XTickLabels',{})
+legend('slow 2000','fast 2000','slow 2100','fast 2100')
+subplot(4,1,4) %QL decomp
+plot(1:12,dqlSSPa/QLmaxSSP(1),1:12,dqlSSPb/QLmaxSSP(2)); hold all;
+plot(1:12,ldqSSPa/QLmaxSSP(1),'-o','Color',[0 0.45 0.74])
+plot(1:12,ldqSSPb/QLmaxSSP(2),'-o','Color',[0.85 0.33 0.1])
+legend('slow \Delta QL','fast \Delta QL','slow L \DeltaQ','fast L \DeltaQ')
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+ylabel('nondim'); xlabel('(d)')
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
 
 %% Arctic computation
 % Nflux, production, P flux down, growth limits, incoming light
+areat=sum(taream(arctic));
+logSS=arctic;
 
+for i=1:36
+    hold1=entraina(:,:,i);
+    entrainAn(i)=nansum(hold1(logSS))./areat;
+    hold1=entraina1(:,:,i);
+    entrainAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=entrainb1(:,:,i);
+    entrainBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=entrainb(:,:,i);
+    entrainBn(i)=nansum(hold1(logSS))./areat;
+
+    hold1=exporta(:,:,i);
+    exportAn(i)=nansum(hold1(logSS))./areat;
+    hold1=exporta1(:,:,i);
+    exportAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=exportb1(:,:,i);
+    exportBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=exportb(:,:,i);
+    exportBn(i)=nansum(hold1(logSS))./areat;
+    
+    hold1=proda(:,:,i);
+    prodAn(i)=nansum(hold1(logSS))./areat;
+    hold1=proda1(:,:,i);
+    prodAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=prodb1(:,:,i);
+    prodBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=prodb(:,:,i);
+    prodBn(i)=nansum(hold1(logSS))./areat;
+ 
+    if i<13
+        hold1=meanQ0(:,:,i,1);
+        QAn(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanQ0(:,:,i,2);
+        QBn(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanQ1(:,:,i,1);
+        QAn1(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanQ1(:,:,i,2);
+        QBn1(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        
+        hold1=meanL0(:,:,i,1);
+        LAn(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanL0(:,:,i,2);
+        LBn(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanL1(:,:,i,1);
+        LAn1(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        hold1=meanL1(:,:,i,2);
+        LBn1(i)=nansum(hold1(logSS).*taream(logSS))./areat;
+        
+        hold1=light(:,:,i);
+        lightA(i,2)=nansum(hold1(logSS).*taream(logSS))./areat;
+        lightA(i,1)=max(hold1(logSS));
+        lightA(i,3)=min(hold1(logSS));
+        hold1=light1(:,:,i);
+        lightA1(i,2)=nansum(hold1(logSS).*taream(logSS))./areat;
+        lightA1(i,1)=max(hold1(logSS));
+        lightA1(i,3)=min(hold1(logSS));
+        
+
+    end
+end
+
+entrainAb0=(entrainBn([36 25:35])+entrainBn([24 13:23])+entrainBn([12 1:11]))*0.365*14*117/(16*3);
+entrainAb1=(entrainBn1([36 25:35])+entrainBn1([24 13:23])+entrainBn1([12 1:11]))*0.365*14*117/(16*3);
+entrainAa0=(entrainAn([36 25:35])+entrainAn([24 13:23])+entrainAn([12 1:11]))*0.365*14*117/(16*3);
+entrainAa1=(entrainAn1([36 25:35])+entrainAn1([24 13:23])+entrainAn1([12 1:11]))*0.365*14*117/(16*3);
+
+exportAb0=(exportBn([36 25:35])+exportBn([24 13:23])+exportBn([12 1:11]))*0.365*14*117/(16*3);
+exportAb1=(exportBn1([36 25:35])+exportBn1([24 13:23])+exportBn1([12 1:11]))*0.365*14*117/(16*3);
+exportAa0=(exportAn([36 25:35])+exportAn([24 13:23])+exportAn([12 1:11]))*0.365*14*117/(16*3);
+exportAa1=(exportAn1([36 25:35])+exportAn1([24 13:23])+exportAn1([12 1:11]))*0.365*14*117/(16*3);
+
+prodAb0=(prodBn([36 25:35])+prodBn([24 13:23])+prodBn([12 1:11]))*0.365*14*117/(16*3);
+prodAb1=(prodBn1([36 25:35])+prodBn1([24 13:23])+prodBn1([12 1:11]))*0.365*14*117/(16*3);
+prodAa0=(prodAn([36 25:35])+prodAn([24 13:23])+prodAn([12 1:11]))*0.365*14*117/(16*3);
+prodAa1=(prodAn1([36 25:35])+prodAn1([24 13:23])+prodAn1([12 1:11]))*0.365*14*117/(16*3);
+
+dqlAa=dQLr([12 1:11],1,2);
+qdlAa=QdLr([12 1:11],1,2);
+ldqAa=LdQr([12 1:11],1,2);
+dqdlAa=dQdLr([12 1:11],1,2);
+dqlAb=dQLr([12 1:11],2,2);
+qdlAb=QdLr([12 1:11],2,2);
+ldqAb=LdQr([12 1:11],2,2);
+dqdlAb=dQdLr([12 1:11],2,2);
+
+for i=1:2
+    holdvar=QL0(:,:,i);
+    QLmaxArc(i)=max(holdvar(logSS));
+end
 %% arctic plot
 
 figure;
 subplot(3,2,1) %entrain
-
-subplot(3,2,2) %Q
-
+plot(1:12,entrainAa0,1:12,entrainAb0); hold all
+plot(1:12,entrainAa1,'--','Color',[0 0.45 0.74])
+plot(1:12,entrainAb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(a)')
+subplot(3,2,2) %QL slow
+plot(1:12,dqlAa/QLmaxArc(1),'k','Linewidth',3); hold on
+plot(1:12,ldqAa/QLmaxArc(1),'r'); plot(1:12,qdlAa/QLmaxArc(1),'c'); plot(1:12,dqdlAa/QLmaxArc(1),'Color',[0.49 0.18 0.56]);
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{}); xlabel('(d)')
 subplot(3,2,3) %prod
-
-subplot(3,2,4) %L
-
+plot(1:12,prodAa0,1:12,prodAb0); hold all
+plot(1:12,prodAa1,'--','Color',[0 0.45 0.74])
+plot(1:12,prodAb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(b)')
+subplot(3,2,4) %QL fast
+plot(1:12,dqlAb/QLmaxArc(2),'k','Linewidth',3); hold on
+plot(1:12,ldqAb/QLmaxArc(2),'r'); plot(1:12,qdlAb/QLmaxArc(2),'c'); plot(1:12,dqdlAb/QLmaxArc(2),'Color',[0.49 0.18 0.56]);
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{}); xlabel('(e)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
 subplot(3,2,5) %export
-
+plot(1:12,exportAa0,1:12,exportAb0); hold all
+plot(1:12,exportAa1,'--','Color',[0 0.45 0.74])
+plot(1:12,exportAb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
+ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
 subplot(3,2,6) %light
-
+hold on;
+f1=fill([1:12 12:-1:1],[lightA([12 1:11],1).' lightA([11:-1:1 12],3).'],'g','LineStyle','none');
+alpha(f1,0.5)
+f2=fill([1:12 12:-1:1],[lightA1([12 1:11],1).' lightA1([11:-1:1 12],3).'],[0.5 0.5 0.5],'LineStyle','none');
+alpha(f2,0.5)
+plot(1:12,lightA([12 1:11],2),'Color',[0.1 0.6 0.1],'LineWidth',2)
+plot(1:12,lightA1([12 1:11],2),'--','Color',[0.5 0.5 0.5],'LineWidth',2)
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
+xlabel('(f)'); ylabel('W/m^2'); legend('max MLD 2000','2100')
 %% Porcupine Abyssal Plane computation
 % Nflux, production, P flux down, growth limit changes, MLD as XMXL
-maskosmosis=(lon>-26)&(lon<-16)&(lat>40)&(lat<50);
+%maskosmosis=(lon>-26)&(lon<-16)&(lat>40)&(lat<50);
+logSS=osmosis;
+areat=sum(taream(logSS));
 
+for i=1:36
+    hold1=entraina(:,:,i);
+    entrainAn(i)=nansum(hold1(logSS))./areat;
+    hold1=entraina1(:,:,i);
+    entrainAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=entrainb1(:,:,i);
+    entrainBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=entrainb(:,:,i);
+    entrainBn(i)=nansum(hold1(logSS))./areat;
+
+    hold1=exporta(:,:,i);
+    exportAn(i)=nansum(hold1(logSS))./areat;
+    hold1=exporta1(:,:,i);
+    exportAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=exportb1(:,:,i);
+    exportBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=exportb(:,:,i);
+    exportBn(i)=nansum(hold1(logSS))./areat;
+    
+    hold1=proda(:,:,i);
+    prodAn(i)=nansum(hold1(logSS))./areat;
+    hold1=proda1(:,:,i);
+    prodAn1(i)=nansum(hold1(logSS))./areat;
+    hold1=prodb1(:,:,i);
+    prodBn1(i)=nansum(hold1(logSS))./areat;
+    hold1=prodb(:,:,i);
+    prodBn(i)=nansum(hold1(logSS))./areat;
+ 
+    if i<13
+        hold1=meanQ0(:,:,i,1);
+        QAn(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanQ0(:,:,i,2);
+        QBn(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanQ1(:,:,i,1);
+        QAn1(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanQ1(:,:,i,2);
+        QBn1(i)=nansum(hold1(logSS).*taream(logSS));
+        
+        hold1=meanL0(:,:,i,1);
+        LAn(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanL0(:,:,i,2);
+        LBn(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanL1(:,:,i,1);
+        LAn1(i)=nansum(hold1(logSS).*taream(logSS));
+        hold1=meanL1(:,:,i,2);
+        LBn1(i)=nansum(hold1(logSS).*taream(logSS));
+        
+        hold1=XMXL(:,:,i);
+        xmxlP(i,2)=nansum(hold1(logSS).*taream(logSS))./areat;
+        xmxlP(i,1)=max(hold1(logSS));
+        xmxlP(i,3)=min(hold1(logSS));
+        hold1=XMXL1(:,:,i);
+        xmxlP1(i,2)=nansum(hold1(logSS).*taream(logSS))./areat;
+        xmxlP1(i,1)=max(hold1(logSS));
+        xmxlP1(i,3)=min(hold1(logSS));
+    end
+end
+
+entrainPb0=(entrainBn([36 25:35])+entrainBn([24 13:23])+entrainBn([12 1:11]))*0.365*14*117/(16*3);
+entrainPb1=(entrainBn1([36 25:35])+entrainBn1([24 13:23])+entrainBn1([12 1:11]))*0.365*14*117/(16*3);
+entrainPa0=(entrainAn([36 25:35])+entrainAn([24 13:23])+entrainAn([12 1:11]))*0.365*14*117/(16*3);
+entrainPa1=(entrainAn1([36 25:35])+entrainAn1([24 13:23])+entrainAn1([12 1:11]))*0.365*14*117/(16*3);
+
+exportPb0=(exportBn([36 25:35])+exportBn([24 13:23])+exportBn([12 1:11]))*0.365*14*117/(16*3);
+exportPb1=(exportBn1([36 25:35])+exportBn1([24 13:23])+exportBn1([12 1:11]))*0.365*14*117/(16*3);
+exportPa0=(exportAn([36 25:35])+exportAn([24 13:23])+exportAn([12 1:11]))*0.365*14*117/(16*3);
+exportPa1=(exportAn1([36 25:35])+exportAn1([24 13:23])+exportAn1([12 1:11]))*0.365*14*117/(16*3);
+
+prodPb0=(prodBn([36 25:35])+prodBn([24 13:23])+prodBn([12 1:11]))*0.365*14*117/(16*3);
+prodPb1=(prodBn1([36 25:35])+prodBn1([24 13:23])+prodBn1([12 1:11]))*0.365*14*117/(16*3);
+prodPa0=(prodAn([36 25:35])+prodAn([24 13:23])+prodAn([12 1:11]))*0.365*14*117/(16*3);
+prodPa1=(prodAn1([36 25:35])+prodAn1([24 13:23])+prodAn1([12 1:11]))*0.365*14*117/(16*3);
+
+dqlPa=dQLr([12 1:11],1,3);
+qdlPa=QdLr([12 1:11],1,3);
+ldqPa=LdQr([12 1:11],1,3);
+dqdlPa=dQdLr([12 1:11],1,3);
+dqlPb=dQLr([12 1:11],2,3);
+qdlPb=QdLr([12 1:11],2,3);
+ldqPb=LdQr([12 1:11],2,3);
+dqdlPb=dQdLr([12 1:11],2,3);
+
+for i=1:2
+    holdvar=QL0(:,:,i);
+    QLmaxPAP(i)=max(holdvar(logSS));
+end
 %% PAP plot
 
 figure;
-subplot(3,2,1) %entrain
+subplot(5,1,1) %entrain
+plot(1:12,entrainPa0,1:12,entrainPb0); hold all
+plot(1:12,entrainPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,entrainPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(a)')
 
-subplot(3,2,2) %Q1/Q, L1/L
+% subplot(3,2,2) %QL slow
+% plot(1:12,dqlPa,'Linewidth',3); hold on
+% plot(1:12,ldqPa); plot(1:12,qdlPa); plot(1:12,dqdlPa);
+% set(gca,'XTick',1:12); xlim([1 12])
+% set(gca,'XTickLabels',{}); xlabel('(d)')
 
-subplot(3,2,3) %prod
+subplot(5,1,2) %prod
+plot(1:12,prodPa0,1:12,prodPb0); hold all
+plot(1:12,prodPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,prodPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('gC/m^2 y'); xlabel('(b)')
 
-subplot(3,2,4) %XMXL
+% subplot(3,2,4) %QL fast
+% plot(1:12,dqlPb,'Linewidth',3); hold on
+% plot(1:12,ldqPb); plot(1:12,qdlPb); plot(1:12,dqdlPb);
+% set(gca,'XTick',1:12); xlim([1 12])
+% set(gca,'XTickLabels',{}); xlabel('(e)')
 
-subplot(3,2,5) %export
+subplot(5,1,3) %export
+plot(1:12,exportPa0,1:12,exportPb0); hold all
+plot(1:12,exportPa1,'--','Color',[0 0.45 0.74])
+plot(1:12,exportPb1,'--','Color',[0.85 0.33 0.1])
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabel',{});%'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
+ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
+
+subplot(5,1,4) %QL decomp
+plot(1:12,dqlPa/QLmaxPAP(1),1:12,dqlPb/QLmaxPAP(2)); hold all;
+plot(1:12,qdlPa/QLmaxPAP(1),'-o','Color',[0 0.45 0.74])
+plot(1:12,ldqPb/QLmaxPAP(2),'-o','Color',[0.85 0.33 0.1])
+legend('slow \Delta QL','fast \Delta QL','slow Q\Delta L','fast L\Delta Q')
+set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+set(gca,'XTickLabels',{})
+ylabel('nondim'); xlabel('(d)')
+
+subplot(5,1,5) %xmxl
+hold on
+f1=fill([1:12 12:-1:1],[xmxlP([12 1:11],1).' xmxlP([11:-1:1 12],3).'],'g','LineStyle','none');
+alpha(f1,0.5)
+f2=fill([1:12 12:-1:1],[xmxlP1(:,1).' xmxlP1(12:-1:1,3).'],[0.5 0.5 0.5],'LineStyle','none');
+alpha(f2,0.5)
+plot(1:12,xmxlP(:,2),'Color',[0.1 0.6 0.1],'LineWidth',2)
+plot(1:12,xmxlP1(:,2),'--','Color',[0.5 0.5 0.5],'LineWidth',2)
+xlim([1 12]); set(gca,'XTick',1:12); set(gca,'fontsize',12)
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
+xlabel('(e)'); ylabel('m'); legend('2000','2100')
 

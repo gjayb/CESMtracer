@@ -38,9 +38,273 @@ meanJN1=squeeze(mean(sum((-10*86400*365*1e-3*14*117/16)*JNall2100,3),4));
 
 y1=sind(lat);
 
-%% load SHF_QSW and HMXL, compute approx L monthly?
-%L=1-exp(-alpha.*I);
+%% %% compute deltaQL=deltaQ*L+deltaL*Q+deltaQ*deltaL+residual, Q1/Q0, L1/L0
+%!! update this-- need to do these decomp BEFORE depth-avg and season-avg
+dQL=squeeze(mean(Q1.*L1-Q0.*L0,[3 4]));
+LdQ=squeeze(mean(L0.*(Q1-Q0),[3 4]));
+QdL=squeeze(mean(Q0.*(L1-L0),[3 4]));
+dQdL=squeeze(mean((L1-L0).*(Q1-Q0),[3 4]));
+reynoldsresid=dQL-LdQ-QdL-dQdL;%small?
+QL0=squeeze(mean(Q0.*L0,[3 4]));
 
+%correlations of components with dQL
+for k=1:12
+    v1=dQL(:,:,k); x=v1(~isnan(v1));
+    y=LdQ(:,:,k); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   cordQL(1,k)=hold1(2); %1 is LdQ, 2 is QdL, 3 is dQdL
+    y=QdL(:,:,k); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   cordQL(2,k)=hold1(2);
+   y=dQdL(:,:,k); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   cordQL(3,k)=hold1(2);
+end
+%LdQ corr 0.59-0.78, QdL corr 0.19-0.63, dQdL corr -0.17-+0.005
+
+
+% correlations of components across parameter space
+for k=1:12
+    corAll(k,k,1:4)=1;
+    for i=k+1:12
+    x=dQL(:,:,k); x=x(~isnan(x));
+    y=dQL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,1)=hold1(2); %1 is dQL 2 is LdQ, 3 is QdL, 4 is dQdL
+   corAll(i,k,1)=hold1(2);
+    x=LdQ(:,:,k); x=x(~isnan(x));
+    y=LdQ(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,2)=hold1(2);
+   corAll(i,k,2)=hold1(2);
+   x=QdL(:,:,k); x=x(~isnan(x));
+    y=QdL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,3)=hold1(2);
+   corAll(i,k,3)=hold1(2);
+    x=dQdL(:,:,k); x=x(~isnan(x));
+    y=dQdL(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corAll(k,i,4)=hold1(2);
+   corAll(i,k,4)=hold1(2);
+    end
+end
+%
+for k=1:12
+    corQL(k,k,1:4)=1;
+    for i=k+1:12
+    x=meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,1)=hold1(2); %1 is Q, 2 is L, 3 is dQ, 4 is dL
+   corQL(i,k,1)=hold1(2);
+    x=meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,2)=hold1(2);
+   corQL(i,k,2)=hold1(2);
+   x=meanQ12(:,:,k)-meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ12(:,:,i)-meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,3)=hold1(2);
+   corQL(i,k,3)=hold1(2);
+    x=meanL12(:,:,k)-meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL12(:,:,i)-meanL02(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corQL(k,i,4)=hold1(2);
+   corQL(i,k,4)=hold1(2);
+    end
+end
+
+%% plot QL, delta(QL), deltaQ*L, deltaL*Q, deltaQ*deltaL 
+globalmeanQL0=squeeze(areaweightedmean(areaweightedmean(QL0,taream,2),mean(taream,2),1));
+globalmaxQL0=squeeze(max(max(QL0)));
+
+figure; subplot(4,3,1) %slow
+scatter(lon(:),y1(:),16,reshape(QL0(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([0 1]); 
+cmocean('algae'); ylabel('QL_{2000}'); title('slow case'); colorbar
+xlabel('(a)')
+
+subplot(4,3,2)
+scatter(lon(:),y1(:),16,reshape(dQL(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{});
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); colorbar
+cmocean('delta','pivot',0); ylabel('QL_{2100}-QL_{2000}'); 
+xlabel('(b)')
+
+subplot(4,3,4)
+scatter(lon(:),y1(:),16,reshape(LdQ(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); 
+cmocean('delta','pivot',0); ylabel('L_{2000}*(Q_{2100}-Q_{2000})'); 
+xlabel('(c)')
+
+subplot(4,3,5)
+scatter(lon(:),y1(:),16,reshape(QdL(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{});
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); 
+cmocean('delta','pivot',0); ylabel('Q_{2000}*(L_{2100}-L_{2000})'); 
+xlabel('(d)')
+
+subplot(4,3,6)
+scatter(lon(:),y1(:),16,reshape(dQdL(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); colorbar
+cmocean('delta','pivot',0); ylabel('\DeltaQ*\DeltaL'); 
+xlabel('(e)')
+% subplot(3,2,6)
+% scatter(lon(:),y1(:),16,reshape(reynoldsresid(:,:,4)/globalmaxQL0(4),1,[]),'filled')
+% set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+% set(gca,'YTickLabels',{});
+% hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+% xlim([0 360]); colorbar; %caxis([-1 1]); 
+% cmocean('delta','pivot',0); ylabel('residual'); 
+
+subplot(4,3,7) %fast
+scatter(lon(:),y1(:),16,reshape(QL0(:,:,11)/globalmaxQL0(11),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([0 1]); 
+cmocean('algae'); ylabel('QL_{2000}'); title('fast case'); colorbar
+xlabel('(f)')
+
+subplot(4,3,8)
+scatter(lon(:),y1(:),16,reshape(dQL(:,:,11)/globalmaxQL0(11),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{});
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); colorbar
+ ylabel('QL_{2100}-QL_{2000}'); 
+xlabel('(g)')
+
+subplot(4,3,10)
+scatter(lon(:),y1(:),16,reshape(LdQ(:,:,11)/globalmaxQL0(11),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); %colorbar('EastOutside')
+ ylabel('L_{2000}*(Q_{2100}-Q_{2000})'); 
+xlabel('(h)')
+
+subplot(4,3,11)
+scatter(lon(:),y1(:),16,reshape(QdL(:,:,11)/globalmaxQL0(11),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{});
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]);caxis([-0.3 0.3])
+cmocean('delta','pivot',0); %colorbar('EastOutside')
+ ylabel('Q_{2000}*(L_{2100}-L_{2000})'); 
+xlabel('(i)')
+
+subplot(4,3,12)
+scatter(lon(:),y1(:),16,reshape(dQdL(:,:,11)/globalmaxQL0(11),1,[]),'filled')
+set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+set(gca,'YTickLabels',{'-60','-30','0','30','60'})
+hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+xlim([0 360]); caxis([-0.3 0.3])
+cmocean('delta','pivot',0); colorbar
+ ylabel('\DeltaQ*\DeltaL'); 
+xlabel('(j)')
+% subplot(3,2,6)
+% scatter(lon(:),y1(:),16,reshape(reynoldsresid(:,:,11)/globalmeanQL0(11),1,[]),'filled')
+% set(gca,'YTick',[-0.866 -0.5 0 0.5 0.866])
+% set(gca,'YTickLabels',{});
+% hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
+% xlim([0 360]); colorbar; caxis([-1 1]); 
+% cmocean('delta','pivot',0); ylabel('residual'); 
+
+
+
+%% case ordering
+figure; subplot(3,1,1)
+scatter(1./(mu.*alpha),kn./mu,36,globalmeanN,'filled'); xlabel('1/mu*alpha'); ylabel('kn/mu'); 
+subplot(3,1,2)
+scatter(1./(mu.*alpha),kn./(1+mu),36,globalmeanN,'filled'); xlabel('1/mu*alpha'); ylabel('kn/(1+mu)'); 
+cb1=colorbar; cb1.Label.String='mean N 100m annual global';
+subplot(3,1,3)
+plot(1./(mu.*alpha) +kn./(1+mu),globalmeanN,'o')
+hold on; plot(1./(mu.*alpha) +kn./(1+mu),globalmeanN1,'o'); ylabel('mean N 100m global annual'); legend('2000 2100')
+xlabel('1/(mu*alpha)+kn/(1+mu)')
+
+figure; subplot(3,1,1)
+scatter(1./(mu.*alpha),kn./mu,36,globalmeanN,'filled'); xlabel('1/mu*alpha'); ylabel('kn/mu'); 
+subplot(3,1,2)
+scatter(1./(mu.*alpha),kn./(1+mu),36,globalmeanN,'filled'); xlabel('1/mu*alpha'); ylabel('kn/(1+mu)'); 
+cb1=colorbar; cb1.Label.String='mean N 100m annual global';
+subplot(3,1,3)
+plot(1./(mu.*alpha) +kn./(mu),globalmeanN,'o')
+hold on; plot(1./(mu.*alpha) +kn./(mu),globalmeanN1,'o'); ylabel('mean N 100m global annual'); legend('2000 2100')
+xlabel('1/(mu*alpha)+kn/(1+mu)')
+
+modelsensitivy=1./(mu.*alpha) +kn./(mu);
+newcaseorder=[7 9 11 8 10 12 4 5 6 1 2 3];
+%% dprod/dN, dprod/dI
+%d(muQL)dN=mu*meanL*k./(meanN+k)^2=
+%d(muQL)dI=mu*meanQ*alpha*(exp(-alpha*meanI))=mu*meanQ*alpha*(1-meanL)
+%for theory, assume meanQ is 0.5 
+%and assume meanL is 100m-avg of L for I=100e^-z/H
+H=-100./log(0.01);%so I=100*exp(-z/H) is 100 @surface, 1 @100m
+z=0:100; I=100*exp(-z./H); for k=1:12; meanLtheory(k)=mean(1-exp(-alpha(k).*I)); end
+dproddNtheory=mu.*meanLtheory.*(0.25./kn);
+dproddItheory=0.5*mu.*alpha.*(1-meanLtheory);
+prodtheory=mu.*meanLtheory.*0.5;
+
+%try N=sqrt(kn./mu)
+dproddNtheory2=mu.*meanLtheory.*kn./(kn+sqrt(kn./mu)).^2;
+dproddItheory2=mu.*(sqrt(kn./mu)./(kn+sqrt(kn./mu))).*alpha.*(1-meanLtheory);
+prodtheory2=mu.*meanLtheory.*(sqrt(kn./mu)./(kn+sqrt(kn./mu)));
+
+globalmeanL=squeeze(areaweightedmean(areaweightedmean(meanL02,taream,2),mean(taream,2),1));
+globalmeanQ=squeeze(areaweightedmean(areaweightedmean(meanQ02,taream,2),mean(taream,2),1));
+globalmeanN=squeeze(areaweightedmean(areaweightedmean(squeeze(nanmean(Nall2000,[3 4])),taream,2),mean(taream,2),1));
+
+globalmeanL1=squeeze(areaweightedmean(areaweightedmean(meanL12,taream,2),mean(taream,2),1));
+globalmeanQ1=squeeze(areaweightedmean(areaweightedmean(meanQ12,taream,2),mean(taream,2),1));
+globalmeanN1=squeeze(areaweightedmean(areaweightedmean(squeeze(nanmean(Nall2100,[3 4])),taream,2),mean(taream,2),1));
+
+
+dproddN=mu(:).*globalmeanL.*kn(:)./((globalmeanN+kn(:)).^2);
+dproddI=mu(:).*globalmeanQ.*alpha(:).*(1-globalmeanL);
+%% plot
+figure; subplot(2,2,1); semilogx(dproddNtheory,1:12,'o'); hold on; semilogx(dproddItheory,1:12,'o')
+ylabel('case'); legend('dR/dN Q=0.5','dR/dI N=k')
+subplot(2,2,2); semilogx(dproddNtheory2,1:12,'o'); hold on; semilogx(dproddItheory2,1:12,'o')
+legend('dR/dN N=(k/mu)^{0.5}','dR/dI')
+subplot(2,2,3); semilogx(dproddNtheory,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddItheory,100*(prod1-prod)./prod,'o');
+ylabel('% change global R')
+subplot(2,2,4); semilogx(dproddNtheory2,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddItheory2,100*(prod1-prod)./prod,'o');
+
+figure; subplot(2,2,1); semilogx(dproddN,1:12,'o'); hold on; semilogx(dproddI,1:12,'o')
+subplot(2,2,2); loglog(dproddN,dproddNtheory,'o'); hold on; loglog(dproddI,dproddItheory,'o')
+loglog([3e-4 1],[3e-4 1],'k')
+subplot(2,2,4)
+loglog(dproddN,dproddNtheory2,'o'); hold on; loglog(dproddI,dproddItheory2,'o')
+loglog([3e-4 1],[3e-4 1],'k')
+subplot(2,2,3)
+semilogx(dproddN,100*(prod1-prod)./prod,'o'); hold on; semilogx(dproddI,100*(prod1-prod)./prod,'o');
+%% surface N as a function of up kn alpha?
+%globalmeanN, globalmeanN1 exist
+%dN/dt=-muN./(kn+N)*(1-exp-alphaI)~~-mu meanQ02 meanL02
+figure; plot(globalmeanN,sqrt(kn./(mu)).*exp(-10*alpha),'o');%,globalmeanN,kn,'.',globalmeanN,alpha,'*'); %sqrt(mu.*kn).*alpha,'o')
 %% compute I from L?
 L02=L0; L02(L02>1)=1; L02(L02<0)=0;
 alpha5(1,1,1,1,1:12)=alpha;
@@ -170,7 +434,7 @@ pcolor(Qg,Lg,freqQLmean(:,:,11)/tot2); shading 'flat'; hold on
 [cc1,cc2]=contour(Qg,Lg,freqQLmean1(:,:,11)/tot2,'w'); clabel(cc1,cc2);
 
 %% compute deltaQL=deltaQ*L+deltaL*Q+deltaQ*deltaL+residual, Q1/Q0, L1/L0
-
+%!! update this-- need to do these decomp BEFORE depth-avg and season-avg
 dQL=squeeze(mean(meanQ1.*meanL1-meanQ0.*meanL0,3));
 LdQ=squeeze(mean(meanL0.*(meanQ1-meanQ0),3));
 QdL=squeeze(mean(meanQ0.*(meanL1-meanL0),3));
@@ -194,6 +458,58 @@ for k=1:12
    cordQL(3,k)=hold1(2);
 end
 
+%% correlations of components across parameter space
+for k=1:12
+    corAll(k,k,1:4)=1;
+    for i=k+1:12
+    x=dQL(:,:,k); x=x(~isnan(x));
+    y=dQL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,1)=hold1(2); %1 is dQL 2 is LdQ, 3 is QdL, 4 is dQdL
+   corAll(i,k,1)=hold1(2);
+    x=LdQ(:,:,k); x=x(~isnan(x));
+    y=LdQ(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,2)=hold1(2);
+   corAll(i,k,2)=hold1(2);
+   x=QdL(:,:,k); x=x(~isnan(x));
+    y=QdL(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corAll(k,i,3)=hold1(2);
+   corAll(i,k,3)=hold1(2);
+    x=dQdL(:,:,k); x=x(~isnan(x));
+    y=dQdL(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corAll(k,i,4)=hold1(2);
+   corAll(i,k,4)=hold1(2);
+    end
+end
+%
+for k=1:12
+    corQL(k,k,1:4)=1;
+    for i=k+1:12
+    x=meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,1)=hold1(2); %1 is Q, 2 is L, 3 is dQ, 4 is dL
+   corQL(i,k,1)=hold1(2);
+    x=meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,2)=hold1(2);
+   corQL(i,k,2)=hold1(2);
+   x=meanQ12(:,:,k)-meanQ02(:,:,k); x=x(~isnan(x));
+    y=meanQ12(:,:,i)-meanQ02(:,:,i); y=y(~isnan(y));
+   hold1=corrcoef(x,y);
+   corQL(k,i,3)=hold1(2);
+   corQL(i,k,3)=hold1(2);
+    x=meanL12(:,:,k)-meanL02(:,:,k); x=x(~isnan(x));
+    y=meanL12(:,:,i)-meanL02(:,:,i); y=y(~isnan(y));
+    hold1=corrcoef(x,y);
+   corQL(k,i,4)=hold1(2);
+   corQL(i,k,4)=hold1(2);
+    end
+end
 
 %% plot QL, delta(QL), deltaQ*L, deltaL*Q, deltaQ*deltaL 
 figure; subplot(3,2,1) %slow
@@ -381,6 +697,99 @@ hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
 set(gca,'Color',[0.7 0.7 0.7]);
 set(gca,'fontsize',12); xlabel('(d)'); title('L_{2100}/L_{2000}')
 c4=colorbar; %c4.Label.String='\Delta months'; 
+
+%% seasonal cycles regional Q L decomposition
+dQLs=squeeze((meanQ1.*meanL1-meanQ0.*meanL0));
+LdQs=squeeze((meanL0.*(meanQ1-meanQ0)));
+QdLs=squeeze((meanQ0.*(meanL1-meanL0)));
+dQdLs=squeeze(((meanL1-meanL0).*(meanQ1-meanQ0)));
+load('climateAndRegions.mat', 'subtropSPac','osmosis','arctic')
+logN=(lat>0)&(basin~=0); logS=(lat<0)&(basin~=0); fracN=sum(taream(logN))./sum(taream(basin~=0));
+%arctic=(basin==10);
+for monthi=1:12
+    for k=1:12
+    hold1=dQLs(:,:,monthi,k);
+    dQLr(monthi,k,1)= nanmean(hold1(subtropSPac));
+    dQLr(monthi,k,2)= nanmean(hold1(arctic));
+    dQLr(monthi,k,3)= nanmean(hold1(osmosis));
+    dQLr(monthi,k,4)= nanmean(hold1(logN))*fracN;
+    dQLr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+        hold1=LdQs(:,:,monthi,k);
+    LdQr(monthi,k,1)= nanmean(hold1(subtropSPac));
+    LdQr(monthi,k,2)= nanmean(hold1(arctic));
+    LdQr(monthi,k,3)= nanmean(hold1(osmosis));
+    LdQr(monthi,k,4)= nanmean(hold1(logN))*fracN;
+    LdQr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+        hold1=QdLs(:,:,monthi,k);
+    QdLr(monthi,k,1)= nanmean(hold1(subtropSPac));
+    QdLr(monthi,k,2)= nanmean(hold1(arctic));
+    QdLr(monthi,k,3)= nanmean(hold1(osmosis));
+    QdLr(monthi,k,4)= nanmean(hold1(logN))*fracN;
+    QdLr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+        hold1=dQdLs(:,:,monthi,k);
+    dQdLr(monthi,k,1)= nanmean(hold1(subtropSPac));
+    dQdLr(monthi,k,2)= nanmean(hold1(arctic));
+    dQdLr(monthi,k,3)= nanmean(hold1(osmosis));
+    dQdLr(monthi,k,4)= nanmean(hold1(logN))*fracN;
+    dQdLr(monthi,k,5)= nanmean(hold1(logS))*(1-fracN);
+    end
+end
+
+%% plot regional breakdowns
+
+figure; subplot(3,2,1);
+plot(1:12,dQLr(:,4,1),'Linewidth',3); hold on
+plot(1:12,LdQr(:,4,1)); plot(1:12,QdLr(:,4,1)); plot(1:12,dQdLr(:,4,1));
+xlim([1 12]); title('slow'); ylabel('SSP'); 
+
+subplot(3,2,2);
+plot(1:12,dQLr(:,11,1),'Linewidth',3); hold on
+plot(1:12,LdQr(:,11,1)); plot(1:12,QdLr(:,11,1)); plot(1:12,dQdLr(:,11,1));
+xlim([1 12]); title('fast'); legend('\DeltaQL','LdQ','QdL','dQdL');
+
+subplot(3,2,3);
+plot(1:12,dQLr(:,4,2),'Linewidth',3); hold on
+plot(1:12,LdQr(:,4,2)); plot(1:12,QdLr(:,4,2)); plot(1:12,dQdLr(:,4,2));
+xlim([1 12]); ylabel('arctic')
+
+subplot(3,2,4);
+plot(1:12,dQLr(:,11,2),'Linewidth',3); hold on
+plot(1:12,LdQr(:,11,2)); plot(1:12,QdLr(:,11,2)); plot(1:12,dQdLr(:,11,2));
+xlim([1 12]);
+
+subplot(3,2,5);
+plot(1:12,dQLr(:,4,3),'Linewidth',3); hold on
+plot(1:12,LdQr(:,4,3)); plot(1:12,QdLr(:,4,3)); plot(1:12,dQdLr(:,4,3));
+xlim([1 12]); ylabel('PAP')
+
+subplot(3,2,6);
+plot(1:12,dQLr(:,11,3),'Linewidth',3); hold on
+plot(1:12,LdQr(:,11,3)); plot(1:12,QdLr(:,11,3)); plot(1:12,dQdLr(:,11,3));
+xlim([1 12]);
+%% plot regional QL decomp for 12 cases
+for k=1:12
+    figure; subplot(4,1,1);
+plot(1:12,dQLr(:,k,1),'Linewidth',3); hold on
+plot(1:12,LdQr(:,k,1)); plot(1:12,QdLr(:,k,1)); plot(1:12,dQdLr(:,k,1));
+xlim([1 12]); title(num2str(k)); ylabel('SSP'); 
+
+subplot(4,1,2);
+plot(1:12,dQLr(:,k,2),'Linewidth',3); hold on
+plot(1:12,LdQr(:,k,2)); plot(1:12,QdLr(:,k,2)); plot(1:12,dQdLr(:,k,2));
+xlim([1 12]); ylabel('arctic')
+
+
+subplot(4,1,3);
+plot(1:12,dQLr(:,k,3),'Linewidth',3); hold on
+plot(1:12,LdQr(:,k,3)); plot(1:12,QdLr(:,k,3)); plot(1:12,dQdLr(:,k,3));
+xlim([1 12]); ylabel('PAP')
+
+subplot(4,1,4);
+plot(1:12,dQLr(:,k,4)+dQLr([7:12 1:6],k,5),'Linewidth',3); hold on
+plot(1:12,LdQr(:,k,4)+LdQr([7:12 1:6],k,5)); plot(1:12,QdLr(:,11,4)+QdLr([7:12 1:6],k,5)); plot(1:12,dQdLr(:,11,4)+dQdLr([7:12 1:6],k,5));
+xlim([1 12]); ylabel('Global')
+    
+end
 %% Plot spatial patterns of months limited
 cmap1=parula(13);
 close all
