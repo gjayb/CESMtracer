@@ -62,13 +62,37 @@ sspgmrb=squeeze(areaweightedmean(areaweightedmean(gmrb.*subtropSPac,taream.*subt
 sspgmra1=squeeze(areaweightedmean(areaweightedmean(gmra1.*subtropSPac,taream.*subtropSPac,2),mean(taream.*subtropSPac,2),1));
 sspgmra=squeeze(areaweightedmean(areaweightedmean(gmra.*subtropSPac,taream.*subtropSPac,2),mean(taream.*subtropSPac,2),1));
 
-figure; subplot(1,2,1)
+figure; subplot(1,3,1)
 bar([sspkppa,sspkppa1,sspkppa1-sspkppa;sspgmra,sspgmra1,sspgmra1-sspgmra;sspwna,sspwna1,sspwna1-sspwna])
 set(gca,'XTick',1:3); set(gca,'XTickLabels',{'KPP','GM-Redi','Adv'}); title('slow'); ylabel('gC/m^2 yr')
-subplot(1,2,2)
+set(gca,'fontsize',12); xlabel('(a)')
+subplot(1,3,2)
 bar([sspkppb,sspkppb1,sspkppb1-sspkppb;sspgmrb,sspgmrb1,sspgmrb1-sspgmrb;sspwnb,sspwnb1,sspwnb1-sspwnb])
 set(gca,'XTick',1:3); set(gca,'XTickLabels',{'KPP','GM-Redi','Adv'}); title('fast'); legend('2000','2100','\Delta')
+set(gca,'fontsize',12);xlabel('(b)')
 
+% compute N profiles
+load('stratificationNutrientQ.mat', 'N*')
+Na0=mean(Na0,4);
+Na1=mean(Na1,4);
+Nb0=mean(Nb0,4);
+Nb1=mean(Nb1,4);
+zm=ncread('salt2000yr30.nc','z_t')/100;
+%%
+for i=1:60
+   hold0=Na0(:,:,i);
+   hold1=Na1(:,:,i);
+   dNa(i)=nansum(hold1(subtropSPac).*taream(subtropSPac))/sum(taream(subtropSPac)) -nansum(hold0(subtropSPac).*taream(subtropSPac))/sum(taream(subtropSPac));
+   hold0=Nb0(:,:,i);
+   hold1=Nb1(:,:,i);
+   dNb(i)=nansum(hold1(subtropSPac).*taream(subtropSPac))/sum(taream(subtropSPac)) -nansum(hold0(subtropSPac).*taream(subtropSPac))/sum(taream(subtropSPac));
+end
+
+subplot(1,3,3)
+plot(dNa,-zm,dNb,-zm); 
+set(gca,'fontsize',12);
+legend('slow','fast'); xlabel({'N','(c)'}); ylabel('depth (m)')
+ylim([-1000 0])
 %% Arctic annual means 
 arcwnb1=squeeze(areaweightedmean(areaweightedmean(wnb1.*arctic,taream.*arctic,2),mean(taream.*arctic,2),1));
 arcwnb=squeeze(areaweightedmean(areaweightedmean(wnb.*arctic,taream.*arctic,2),mean(taream.*arctic,2),1));
