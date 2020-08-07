@@ -34,35 +34,43 @@ for i=1:7
 end
 %% Plot Basin map, production 2000s, 2100s, % change
 y1=sind(lat); pbasin=100*(basinprod1-basinprod)./basinprod;
-c1=cmocean('thermo',8); colors1=zeros(7,3); colors1([2 6 7],:)=c1(3:2:7,:);
-c1=cmocean('haline',7); colors1(3:5,:)=c1([3 5 6],:);
+orderp2b=round(orderp2,3,'significant');
+c1=cmocean('thermo',8); colors1=zeros(7,3); colors1(5:7,:)=c1(5:7,:);
+c1=cmocean('haline',8); colors1(2:4,:)=c1([2 5 7],:);
 figure; subplot(2,2,1)
-scatter(lon(basin2==1),y1(basin2==1),16,colors1(1,:),'filled'); hold on; 
-for i=2:7
-    scatter(lon(basin2==i),y1(basin2==i),16,colors1(i,:),'filled');
-end
+scatter(lon(:),y1(:),16,basin2(:),'filled'); hold on; 
 scatter(lon(basin==0),y1(basin==0),9,[0.7 0.7 0.7],'filled')
 xlim([0 360]); set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
 set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
+cb1=colorbar; caxis([0.5 7.5]); colormap(colors1);
+cb1.Ticks=1:7; 
+cb1.TickLabels={'Southern','S Pacific','S Atlantic','Indian','N Pacific','N Atlantic','Arctic'};
+set(gca,'fontsize',12)
+title('Basins'); ylabel('latitude'); xlabel({'longitude','(a)'})
 subplot(2,2,2); 
 for i=1:7
 plot(1:12,basinprod(iorder,i),'-o','Color',colors1(i,:)); hold on
 end
 xlim([0.5 12.5]); set(gca,'XTick',1:12)
-set(gca,'XTickLabels',orderp2)
-legend('Southern','S Pacific','S Atlantic','Indian','N Pacific','N Atlantic','Arctic')
+set(gca,'fontsize',12)
+set(gca,'XTickLabels',orderp2b)
+ylabel({'new production 2000s','gC'}); xlabel({'order parameter','(b)'})
 subplot(2,2,3);
 for i=1:7
 plot(1:12,basinprod1(iorder,i),'-o','Color',colors1(i,:)); hold on
 end
 xlim([0.5 12.5]); set(gca,'XTick',1:12)
-set(gca,'XTickLabels',orderp2)
+set(gca,'fontsize',12)
+set(gca,'XTickLabels',orderp2b)
+ylabel({'new production 2100s','gC'}); xlabel({'order parameter','(c)'})
 subplot(2,2,4);
 for i=1:7
 plot(1:12,pbasin(iorder,i),'-o','Color',colors1(i,:)); hold on
 end
 xlim([0.5 12.5]); set(gca,'XTick',1:12)
-set(gca,'XTickLabels',orderp2)
+set(gca,'fontsize',12)
+set(gca,'XTickLabels',orderp2b)
+ylabel({'% change of','new production'}); xlabel({'order parameter','(d)'})
 %% Biome calculations
 
 w0=ncread('w100m2000annual.nc','WVEL');
@@ -111,16 +119,78 @@ end
 biomecprod=nan(12,8);%12 cases, 12 biomes
 biomecprod1=nan(12,8);
 for i=1:8
-    biomecprod(:,i)=squeeze(nansum(nansum(prodall2000.*repmat(taream.*maskc0(:,:,i),[1 1 12]))));
-    biomecprod1(:,i)=squeeze(nansum(nansum(prodall2100.*repmat(taream.*maskc1(:,:,i),[1 1 12]))));
+    biomecprod(:,i)=squeeze(mean(nansum(-JNall2000*(10*86400*365*1e-3*14*117/16).*repmat(taream.*maskc0(:,:,i),[1 1 10 12 12]),[3 2 1]),4));
+    biomecprod1(:,i)=squeeze(mean(nansum(-JNall2100*(10*86400*365*1e-3*14*117/16).*repmat(taream.*maskc1(:,:,i),[1 1 10 12 12]),[3 2 1]),4));
 end
 
-%% Biome map
-y1=sind(lat);
-figure; subplot(1,2,1)
+%% Biome plot: 
+%map2000, map2100
+%areas2000,%change
+%prodrate2000, %change
+%totprod2000, %change
+
+y1=sind(lat);  colors1=zeros(8,3);
+c1=cmocean('thermo',8); colors1(5:7,:)=c1(5:7,:);
+c2=cmocean('haline',8); colors1([1 3 4],:)=c2([2 5 7],:); colors1(2,:)=[0.9 0 0.1];
+
+figure; subplot(4,2,1)
 scatter(lon(:),y1(:),16,biomec(:),'filled'); hold on; scatter(lon(basin==0),y1(basin==0),9,[0.7 0.7 0.7],'filled')
-subplot(1,2,2)
+set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
+set(gca,'fontsize',12)
+set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
+ylabel('latitude'); xlabel({'longitude','(a)'})
+xlim([-180 180])
+subplot(4,2,2)
 scatter(lon(:),y1(:),16,biomec1(:),'filled'); hold on; scatter(lon(basin==0),y1(basin==0),9,[0.7 0.7 0.7],'filled')
+set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
+set(gca,'fontsize',12)
+set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
+cb2=colorbar; cb2.Ticks=1:8; caxis([0.5 8.5]);
+cb2.TickLabels={'Eq D','Eq U','ST PS','ST SS','LLU','SP','N I','S I'};
+ xlabel({'longitude','(b)'}); colormap(colors1); xlim([-180 180])
+ 
+ subplot(4,2,3)
+for i=1:8; hold on; plot(i,biomecarea(i),'o','MarkerSize',10,'Color',colors1(i,:),'MarkerFaceColor',colors1(i,:)); end
+%for i=1:8; hold on; plot(i,biomecarea1(i),'d','MarkerSize',10,'Color',colors1(i,:),'MarkerFaceColor',colors1(i,:)); end
+set(gca,'fontsize',12)
+xlim([0.5 8.5]); set(gca,'XTick',1:8);
+set(gca,'XTickLabels',{'Eq D','Eq U','ST PS','ST SS','LLU','SP','N I','S I'});
+ylabel('biome area, m^2'); xlabel({'biome','(c)'})
+
+subplot(4,2,4)
+parea=100*(biomecarea1-biomecarea)./biomecarea;
+for i=1:8; hold on; plot(i,parea(i),'s','MarkerSize',10,'Color',colors1(i,:),'MarkerFaceColor',colors1(i,:)); end
+plot([0 9],[0 0],'k')
+set(gca,'fontsize',12)
+xlim([0.5 8.5]); set(gca,'XTick',1:8);
+set(gca,'XTickLabels',{'Eq D','Eq U','ST PS','ST SS','LLU','SP','N I','S I'});
+ylabel({'biome area','% change'}); xlabel({'biome','(d)'})
+
+subplot(4,2,5)
+for i=1:8; hold on; plot(1:12,biomecprod(:,i)./biomecarea(i),'-o','Color',colors1(i,:)); end
+set(gca,'fontsize',12)
+xlim([0.5 12.5]); set(gca,'XTick',1:12); set(gca,'XTickLabels',orderp2b)
+xlabel({'order parameter','(e)'}); ylabel({'production rate','gC/m^2'})
+
+subplot(4,2,6) 
+prate=100*((biomecprod1./repmat(biomecarea1.',[12 1]))-(biomecprod./repmat(biomecarea.',[12 1])))./(biomecprod./repmat(biomecarea.',[12 1]));
+for i=1:8; hold on; plot(1:12,prate(:,i),'-o','Color',colors1(i,:)); end
+set(gca,'fontsize',12)
+xlim([0.5 12.5]); set(gca,'XTick',1:12); set(gca,'XTickLabels',orderp2b)
+xlabel({'order parameter','(e)'}); ylabel({'production rate','% change'})
+
+subplot(4,2,7)
+for i=1:8; hold on; plot(1:12,biomecprod(:,i),'-o','Color',colors1(i,:)); end
+set(gca,'fontsize',12)
+xlim([0.5 12.5]); set(gca,'XTick',1:12); set(gca,'XTickLabels',orderp2b)
+xlabel({'order parameter','(e)'}); ylabel({'annual production','gC'})
+
+subplot(4,2,8) 
+prate2=100*(biomecprod1-biomecprod)./(biomecprod);
+for i=1:8; hold on; plot(1:12,prate2(:,i),'-o','Color',colors1(i,:)); end
+set(gca,'fontsize',12)
+xlim([0.5 12.5]); set(gca,'XTick',1:12); set(gca,'XTickLabels',orderp2b)
+xlabel({'order parameter','(e)'}); ylabel({'annual production','% change'})
 %% Plot Biome area, frac change, production rate, frac change, tot prod, frac change
 %old versions
 figure; subplot(4,1,1)
