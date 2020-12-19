@@ -10,6 +10,12 @@ clear JNall2*
 load('globalLatlonbasin.mat')
 load('climateAndRegions.mat','osmosis','subtropSPac')
 y1=sind(lat);
+%% compute pattern correlation
+pc1=100*(prod1(:,:,1)-prod(:,:,1))./prod(:,:,1);
+pc2=100*(prod1(:,:,2)-prod(:,:,2))./prod(:,:,2);
+pc1=pc1(~isnan(pc1)); pc2=pc2(~isnan(pc2));
+[c1,c2]=corrcoef(pc1,pc2)
+
 %% plot production
 
 figure; subplot(2,2,1)
@@ -42,7 +48,7 @@ subplot(2,2,3)
 scatter(lon(:),y1(:),16,reshape(100*(prod1(:,:,1)-prod(:,:,1))./prod(:,:,1),1,[]),'filled')
 set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
 set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
-xlim([0 360]); caxis([-100 200]); cmocean('balance','pivot',0)
+xlim([0 360]); caxis([-100 200]); cmocean('delta','pivot',0)
 hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
 set(gca,'Color',[0.7 0.7 0.7]);
 contour(lon,y1,subtropSPac,[1 1],'m')
@@ -55,7 +61,7 @@ subplot(2,2,4)
 scatter(lon(:),y1(:),16,reshape(100*(prod1(:,:,2)-prod(:,:,2))./prod(:,:,2),1,[]),'filled')
 set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
 set(gca,'YTickLabels',{})
-xlim([0 360]); caxis([-100 200]); cmocean('balance','pivot',0)
+xlim([0 360]); caxis([-100 200]); cmocean('delta','pivot',0)
 hold on; scatter(lon(basin==0),y1(basin==0),4,[0.7 0.7 0.7],'filled')
 set(gca,'Color',[0.7 0.7 0.7]);
 contour(lon,y1,subtropSPac,[1 1],'m')

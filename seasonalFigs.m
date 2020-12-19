@@ -1,5 +1,73 @@
 % Seasonal cycle plots for globe and 3 regions
 
+
+%% all 12 cases, global seasonal cycle
+load('yr10JN100m.mat','JNall*')
+load('yr10N100m.mat','Nall*')
+load('globalLatlonbasin.mat')
+load('stratificationNutrientQ.mat', 'taream')
+logN=(lat>0)&(basin~=0);%northern and southern hemisphere
+logS=(lat<0)&(basin~=0);
+arean=sum(taream(logN));
+areas=sum(taream(logS));
+areat=sum(taream(basin~=0));
+%
+prod=squeeze(nansum(-JNall2000*(10*86400*365*1e-3*14*117/16).*repmat(taream,[1 1 10 12 12]),3));%xyz time case
+prod1=squeeze(nansum(-JNall2100*(10*86400*365*1e-3*14*117/16).*repmat(taream,[1 1 10 12 12]),3));
+
+for i=1:12
+    for j=1:12
+        hold1=prod(:,:,i,j);
+        prodAn(i,j)=nansum(hold1(logN));
+        prodAs(i,j)=nansum(hold1(logS)); 
+        hold1=prod1(:,:,i,j);
+        prodAn1(i,j)=nansum(hold1(logN));
+        prodAs1(i,j)=nansum(hold1(logS)); 
+    end
+end
+prodG0=((prodAn([12 1:11],:))+(prodAs([6:12 1:5],:)))./(areat);
+prodG1=((prodAn1([12 1:11],:))+(prodAs1([6:12 1:5],:)))./(areat);
+%
+figure; 
+for i=1:12
+    subplot(4,3,i)
+    plot(1:12,prodG0(:,i),1:12,prodG1(:,i),'--')
+    xlim([0.5 12.5]); ylim([0 44]); %title(num2str(orderparam12(i)))
+end
+% plot ~dQL
+figure;
+for i=1:12
+    subplot(4,3,i)
+    plot(1:12,(-prodG0(:,i)+prodG1(:,i))/mu(i))
+    xlim([0.5 12.5]); %title(num2str(orderparam12(i)))
+end
+%% arctic
+arctic=(lat>66.5)&(basin~=0);
+areat=sum(taream(arctic));
+for i=1:12
+    for j=1:12
+        hold1=prod(:,:,i,j);
+        prodA(i,j)=nansum(hold1(arctic));
+        hold1=prod1(:,:,i,j);
+        prodA1(i,j)=nansum(hold1(arctic));
+    end
+end
+prodArc0=prodA([12 1:11],:)./(areat);
+prodArc1=prodA1([12 1:11],:)./(areat);
+figure; 
+for i=1:12
+    subplot(4,3,i)
+    plot(1:12,prodArc0(:,i),1:12,prodArc1(:,i),'--')
+    xlim([0.5 12.5]); % title(num2str(orderparam12(i)))
+end
+% plot ~dQL
+figure;
+for i=1:12
+    subplot(4,3,i)
+    plot(1:12,(-prodArc0(:,i)+prodArc1(:,i))/mu(i))
+    xlim([0.5 12.5]); %title(num2str(orderparam12(i)))
+end
+%%
 %load NPbudgets
 %entrainment1, production1, export1
 load('npFluxes100m2100tau30w10.332.mat', 'entrainment1','export1','production1','taream')
@@ -272,25 +340,26 @@ set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(a)')
 set(gca,'fontsize',12)
 
-subplot(3,2,3) %prod
+subplot(3,2,2) %prod
 plot(1:12,prodGa0,1:12,prodGb0); hold all
 plot(1:12,prodGa1,'--','Color',[0 0.45 0.74])
 plot(1:12,prodGb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); ylim([0 40])
-set(gca,'XTickLabels',{})
+set(gca,'XTickLabels',{});%set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
 ylabel('gC/m^2 y'); xlabel('(b)')
 set(gca,'fontsize',12)
+legend('slow 2000','fast 2000','slow 2100','fast 2100')
 
-subplot(3,2,5) %export
-plot(1:12,exportGa0,1:12,exportGb0); hold all
-plot(1:12,exportGa1,'--','Color',[0 0.45 0.74])
-plot(1:12,exportGb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12]); ylim([-40 0])
-set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
-ylabel('gC/m^2 y'); xlabel('(c)')
-set(gca,'fontsize',12); legend('slow 2000','fast 2000','slow 2100','fast 2100')
+% subplot(3,2,5) %export
+% plot(1:12,exportGa0,1:12,exportGb0); hold all
+% plot(1:12,exportGa1,'--','Color',[0 0.45 0.74])
+% plot(1:12,exportGb1,'--','Color',[0.85 0.33 0.1])
+% set(gca,'XTick',1:12); xlim([1 12]); ylim([-40 0])
+% set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
+% ylabel('gC/m^2 y'); xlabel('(c)')
+% set(gca,'fontsize',12); 
 
-subplot(3,2,6) %mld, no strat
+subplot(3,2,5) %mld, no strat
 %yyaxis 'left'
 % set(gca,'YColor','k');
 plot(1:12,mldG0/100,'k'); hold on; plot(1:12,mldG1/100,'k--')
@@ -302,22 +371,23 @@ ylabel('MLD')
 %ylabel('\Delta \sigma_\theta')
 set(gca,'XTick',1:12); xlim([1 12])
 set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
- xlabel('(f)')
+ xlabel('(e)')
  set(gca,'fontsize',12); legend('2000','2100')
 
-subplot(3,2,2) %QL decomp
+subplot(3,2,3) %QL decomp
 plot(1:12,dqlGa/globalmaxQL0(1),'k','Linewidth',3); hold on
 plot(1:12,ldqGa/globalmaxQL0(1),'r'); plot(1:12,qdlGa/globalmaxQL0(1),'c'); plot(1:12,dqdlGa/globalmaxQL0(1),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12]);set(gca,'XTickLabels',{})
-xlabel('(d)')
+xlabel('(c)')
 set(gca,'fontsize',12)
 
 subplot(3,2,4) %Ql decomp
 plot(1:12,dqlGb/globalmaxQL0(2),'k','Linewidth',3); hold on
 plot(1:12,ldqGb/globalmaxQL0(2),'r'); plot(1:12,qdlGb/globalmaxQL0(2),'c'); plot(1:12,dqdlGb/globalmaxQL0(2),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12])
-set(gca,'XTickLabels',{})
-xlabel('(e)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
+%set(gca,'XTickLabels',{})
+set(gca,'XTickLabel',{'J\newlineJ','F\newlineA','M\newlineS','A\newlineO','M\newlineN','J\newlineD','J\newlineJ','A\newlineF','S\newlineM','O\newlineA','N\newlineM','D\newlineJ'}) 
+xlabel('(d)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
 set(gca,'fontsize',12)
 
 
@@ -408,39 +478,41 @@ end
 %ADD entrain change cause??
 %switch month order to 7:12 1:6??
 figure;
-subplot(4,1,1) %entrain 
+subplot(3,1,1) %entrain 
 plot(1:12,entrainSSPa0,1:12,entrainSSPb0); hold all
 plot(1:12,entrainSSPa1,'--','Color',[0 0.45 0.74])
 plot(1:12,entrainSSPb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
 set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(a)')
-subplot(4,1,2) %prod
+subplot(3,1,2) %prod
 plot(1:12,prodSSPa0,1:12,prodSSPb0); hold all
 plot(1:12,prodSSPa1,'--','Color',[0 0.45 0.74])
 plot(1:12,prodSSPb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
 set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(b)')
-subplot(4,1,3) %export
-plot(1:12,exportSSPa0,1:12,exportSSPb0); hold all
-plot(1:12,exportSSPa1,'--','Color',[0 0.45 0.74])
-plot(1:12,exportSSPb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-ylabel('gC/m^2 y'); xlabel('(c)')
-set(gca,'XTickLabels',{})
+% subplot(4,1,3) %export
+% plot(1:12,exportSSPa0,1:12,exportSSPb0); hold all
+% plot(1:12,exportSSPa1,'--','Color',[0 0.45 0.74])
+% plot(1:12,exportSSPb1,'--','Color',[0.85 0.33 0.1])
+% set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+% ylabel('gC/m^2 y'); xlabel('(c)')
+% set(gca,'XTickLabels',{})
 legend('slow 2000','fast 2000','slow 2100','fast 2100')
-subplot(4,1,4) %QL decomp
+subplot(3,1,3) %QL decomp
 plot(1:12,dqlSSPa/QLmaxSSP(1),1:12,dqlSSPb/QLmaxSSP(2)); hold all;
 plot(1:12,ldqSSPa/QLmaxSSP(1),'-o','Color',[0 0.45 0.74])
 plot(1:12,ldqSSPb/QLmaxSSP(2),'-o','Color',[0.85 0.33 0.1])
 legend('slow \Delta QL','fast \Delta QL','slow L \DeltaQ','fast L \DeltaQ')
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-ylabel('nondim'); xlabel('(d)')
+ylabel('nondim'); xlabel('(c)')
 set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
-
+%%
+figure; plot(100*(ldqSSPa-dqlSSPa)./(dqlSSPa)); hold on; plot(100*(ldqSSPb-dqlSSPb)./(dqlSSPb))
 %% Arctic computation
 % Nflux, production, P flux down, growth limits, incoming light
+arctic=(lat>66.5)&(basin~=0);
 areat=sum(taream(arctic));
 logSS=arctic;
 
@@ -535,48 +607,52 @@ end
 %% arctic plot
 
 figure;
-subplot(3,2,1) %entrain
+subplot(2,2,1) %entrain
 plot(1:12,entrainAa0,1:12,entrainAb0); hold all
 plot(1:12,entrainAa1,'--','Color',[0 0.45 0.74])
 plot(1:12,entrainAb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
 set(gca,'XTickLabels',{})
 ylabel('gC/m^2 y'); xlabel('(a)')
-subplot(3,2,2) %QL slow
+subplot(2,2,2) %QL slow
 plot(1:12,dqlAa/QLmaxArc(1),'k','Linewidth',3); hold on
 plot(1:12,ldqAa/QLmaxArc(1),'r'); plot(1:12,qdlAa/QLmaxArc(1),'c'); plot(1:12,dqdlAa/QLmaxArc(1),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabels',{}); xlabel('(d)')
-subplot(3,2,3) %prod
+set(gca,'XTickLabels',{}); xlabel('(c)')
+subplot(2,2,3) %prod
 plot(1:12,prodAa0,1:12,prodAb0); hold all
 plot(1:12,prodAa1,'--','Color',[0 0.45 0.74])
 plot(1:12,prodAb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabels',{})
+%set(gca,'XTickLabels',{})
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
 ylabel('gC/m^2 y'); xlabel('(b)')
-subplot(3,2,4) %QL fast
+legend('slow 2000','fast 2000','slow 2100','fast 2100')
+subplot(2,2,4) %QL fast
 plot(1:12,dqlAb/QLmaxArc(2),'k','Linewidth',3); hold on
 plot(1:12,ldqAb/QLmaxArc(2),'r'); plot(1:12,qdlAb/QLmaxArc(2),'c'); plot(1:12,dqdlAb/QLmaxArc(2),'Color',[0.49 0.18 0.56]);
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabels',{}); xlabel('(e)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
-subplot(3,2,5) %export
-plot(1:12,exportAa0,1:12,exportAb0); hold all
-plot(1:12,exportAa1,'--','Color',[0 0.45 0.74])
-plot(1:12,exportAb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
-ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
-subplot(3,2,6) %light
-hold on;
-f1=fill([1:12 12:-1:1],[lightA([12 1:11],1).' lightA([11:-1:1 12],3).'],'g','LineStyle','none');
-alpha(f1,0.5)
-f2=fill([1:12 12:-1:1],[lightA1([12 1:11],1).' lightA1([11:-1:1 12],3).'],[0.5 0.5 0.5],'LineStyle','none');
-alpha(f2,0.5)
-plot(1:12,lightA([12 1:11],2),'Color',[0.1 0.6 0.1],'LineWidth',2)
-plot(1:12,lightA1([12 1:11],2),'--','Color',[0.5 0.5 0.5],'LineWidth',2)
-set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
-xlabel('(f)'); ylabel('W/m^2'); legend('max MLD 2000','2100')
+%set(gca,'XTickLabels',{}); 
+xlabel('(d)'); legend('\Delta QL','L \DeltaQ','Q \DeltaL','\DeltaQ \DeltaL')
+set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
+% subplot(3,2,5) %export
+% plot(1:12,exportAa0,1:12,exportAb0); hold all
+% plot(1:12,exportAa1,'--','Color',[0 0.45 0.74])
+% plot(1:12,exportAb1,'--','Color',[0.85 0.33 0.1])
+% set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+% set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
+% ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
+% subplot(3,2,6) %light
+% hold on;
+% f1=fill([1:12 12:-1:1],[lightA([12 1:11],1).' lightA([11:-1:1 12],3).'],'g','LineStyle','none');
+% alpha(f1,0.5)
+% f2=fill([1:12 12:-1:1],[lightA1([12 1:11],1).' lightA1([11:-1:1 12],3).'],[0.5 0.5 0.5],'LineStyle','none');
+% alpha(f2,0.5)
+% plot(1:12,lightA([12 1:11],2),'Color',[0.1 0.6 0.1],'LineWidth',2)
+% plot(1:12,lightA1([12 1:11],2),'--','Color',[0.5 0.5 0.5],'LineWidth',2)
+%set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+%set(gca,'XTickLabel',{'J','F','M','A','M','J','J','A','S','O','N','D'}) 
+%xlabel('(f)'); ylabel('W/m^2'); legend('max 2000','2100')
 %% Porcupine Abyssal Plane computation
 % Nflux, production, P flux down, growth limit changes, MLD as XMXL
 %maskosmosis=(lon>-26)&(lon<-16)&(lat>40)&(lat<50);
@@ -672,7 +748,7 @@ end
 %% PAP plot
 
 figure;
-subplot(5,1,1) %entrain
+subplot(4,1,1) %entrain
 plot(1:12,entrainPa0,1:12,entrainPb0); hold all
 plot(1:12,entrainPa1,'--','Color',[0 0.45 0.74])
 plot(1:12,entrainPb1,'--','Color',[0.85 0.33 0.1])
@@ -686,13 +762,13 @@ ylabel('gC/m^2 y'); xlabel('(a)')
 % set(gca,'XTick',1:12); xlim([1 12])
 % set(gca,'XTickLabels',{}); xlabel('(d)')
 
-subplot(5,1,2) %prod
+subplot(4,1,2) %prod
 plot(1:12,prodPa0,1:12,prodPb0); hold all
 plot(1:12,prodPa1,'--','Color',[0 0.45 0.74])
 plot(1:12,prodPb1,'--','Color',[0.85 0.33 0.1])
 set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
 set(gca,'XTickLabels',{})
-ylabel('gC/m^2 y'); xlabel('(b)')
+ylabel('gC/m^2 y'); xlabel('(b)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
 
 % subplot(3,2,4) %QL fast
 % plot(1:12,dqlPb,'Linewidth',3); hold on
@@ -700,15 +776,15 @@ ylabel('gC/m^2 y'); xlabel('(b)')
 % set(gca,'XTick',1:12); xlim([1 12])
 % set(gca,'XTickLabels',{}); xlabel('(e)')
 
-subplot(5,1,3) %export
-plot(1:12,exportPa0,1:12,exportPb0); hold all
-plot(1:12,exportPa1,'--','Color',[0 0.45 0.74])
-plot(1:12,exportPb1,'--','Color',[0.85 0.33 0.1])
-set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
-set(gca,'XTickLabel',{});%'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
-ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
+% subplot(5,1,3) %export
+% plot(1:12,exportPa0,1:12,exportPb0); hold all
+% plot(1:12,exportPa1,'--','Color',[0 0.45 0.74])
+% plot(1:12,exportPb1,'--','Color',[0.85 0.33 0.1])
+% set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
+% set(gca,'XTickLabel',{});%'J','F','M','A','M','J','J','A','S','O','N','DJ'}) 
+% ylabel('gC/m^2 y'); xlabel('(c)'); legend('slow 2000','fast 2000','slow 2100','fast 2100')
 
-subplot(5,1,4) %QL decomp
+subplot(4,1,3) %QL decomp
 plot(1:12,dqlPa/QLmaxPAP(1),1:12,dqlPb/QLmaxPAP(2)); hold all;
 plot(1:12,qdlPa/QLmaxPAP(1),'-o','Color',[0 0.45 0.74])
 plot(1:12,ldqPb/QLmaxPAP(2),'-o','Color',[0.85 0.33 0.1])
@@ -717,7 +793,7 @@ set(gca,'XTick',1:12); xlim([1 12]); set(gca,'fontsize',12)
 set(gca,'XTickLabels',{})
 ylabel('nondim'); xlabel('(d)')
 
-subplot(5,1,5) %xmxl
+subplot(4,1,4) %xmxl
 hold on
 f1=fill([1:12 12:-1:1],[xmxlP([12 1:11],1).' xmxlP([11:-1:1 12],3).'],'g','LineStyle','none');
 alpha(f1,0.5)

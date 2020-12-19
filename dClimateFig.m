@@ -3,7 +3,7 @@
 %load small
 dHMXLmax=ncread('HMXLmaxdiff2111.nc','HMXL'); %using XMXL instead!
 dI=ncread('SHFQSWmaxdiff2111.nc','SHF_QSW');
-dSSH=ncread('sshAnnualDiff.nc','SSH');
+dSSH=0.01*ncread('sshAnnualDiff.nc','SSH');
 dW=ncread('w100mAnnualDiff.nc','WVEL');
 
 %load potential density
@@ -38,7 +38,7 @@ subplot(3,2,2); scatter(lon(:),y(:),9,dXMXLmax(:),'filled');
 hold on; scatter(lon(basin==0),y(basin==0),4,[0.7 0.7 0.7],'filled')
 xlim([0 360]); ylim([-1 1]); set(gca,'XTickLabels',{}); set(gca,'YTickLabels',{});
 c2=colorbar; caxis([-250 250]); cmocean('balance','pivot',0); c2.Label.String='\Delta m'; 
-xlabel('(b)')
+xlabel('(d)')
 
 subplot(3,2,3); scatter(lon(:),y(:),9,dSSH(:),'filled');
 hold on; scatter(lon(basin==0),y(basin==0),4,[0.7 0.7 0.7],'filled')
@@ -46,14 +46,14 @@ set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
 set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
 xlim([0 360]); set(gca,'XTickLabels',{});
 c3=colorbar;  cmocean('balance','pivot',0); c3.Label.String='\Delta m'; 
-xlabel('(c)')
+xlabel('(b)')
 
 %add stratification here?
 subplot(3,2,4); scatter(lon(:),y(:),9,dstrat(:)./100,'filled');
 hold on; scatter(lon(basin==0),y(basin==0),4,[0.7 0.7 0.7],'filled')
 xlim([0 360]); ylim([-1 1]); set(gca,'XTickLabels',{}); set(gca,'YTickLabels',{});
 c4=colorbar;  cmocean('balance','pivot',0); c4.Label.String='\Delta d\sigma_\theta/dz'; 
-xlabel('(d)')
+xlabel('(e)')
 
 subplot(3,2,5); scatter(lon(:),y(:),9,dW(:)*86400,'filled');
 hold on; scatter(lon(basin==0),y(basin==0),4,[0.7 0.7 0.7],'filled')
@@ -62,6 +62,6 @@ set(gca,'YTick',[-1 -0.866 -0.5 0 0.5 0.866 1])
 set(gca,'YTickLabels',{'-90','-60','-30','0','30','60','90'})
 xlabel('longitude'); ylabel('latitude')
 c5=colorbar; caxis([-35 35]); cmocean('balance','pivot',0); c5.Label.String='\Delta m/day'; 
-xlabel('(e)')
+xlabel('(c)')
 
 

@@ -37,6 +37,7 @@ meanJN0=squeeze(mean(sum((-10*86400*365*1e-3*14*117/16)*JNall2000,3),4)); %10*86
 meanJN1=squeeze(mean(sum((-10*86400*365*1e-3*14*117/16)*JNall2100,3),4));
 
 y1=sind(lat);
+
 %% Plot spatial patterns of months limited
 cmap1=parula(13);
 close all
